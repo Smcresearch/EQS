@@ -7,7 +7,7 @@
   <meta name="description" content="Backtest and live portfolio of two momentum strategies (Top 3 and Top 15) on 12-1 momentum, 52-week high and ROCE.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Roboto+Mono:wght@400;500;700&display=swap">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <div id="modal" class="modal" hidden>
@@ -20,9 +20,9 @@
 <main class="app">
   <header class="site-header">
     <div class="brand">
-      <div class="badge">EQ</div>
+      <div class="logo-chip"><img src="smc_logo.webp" alt="SMC — moneywise. be wise." onerror="this.parentNode.outerHTML='<div class=badge>EQ</div>'"></div>
       <div>
-        <h1>EquiQuant <small id="h-strat"></small></h1>
+        <h1><span class="grad">EquiQuant</span> <small id="h-strat"></small></h1>
         <p class="sub mono" id="h-period"></p>
         <p class="sub mono" id="h-built"></p>
       </div>
@@ -148,7 +148,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
   window.STRAT = new URLSearchParams(location.search).get('s') === 'top15' ? 'top15' : 'top3';
-  document.write(`<script src="${STRAT === 'top3' ? 'data_top3.js' : 'data.js'}?v=6"><\/script><script src="app.js?v=6"><\/script>`);
+  document.write(`<script src="${STRAT === 'top3' ? 'data_top3.js' : 'data.js'}?v=7"><\/script><script src="app.js?v=7"><\/script>`);
 </script>
 </body>
 </html>

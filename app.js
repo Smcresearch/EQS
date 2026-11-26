@@ -63,7 +63,7 @@ function mk(id, cfg) {
   const c = colors();
   Chart.defaults.color = c.text; Chart.defaults.borderColor = c.grid;
   Chart.defaults.font.family = "'Inter', system-ui, sans-serif"; Chart.defaults.font.size = 11;
-  cfg.options = Object.assign({ responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+  cfg.options = Object.assign({ animation: false, normalized: true, responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
     plugins: { legend: { labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true } } } }, cfg.options || {});
   charts[id] = new Chart($(id), cfg);
 }
@@ -317,7 +317,13 @@ function method() {
 }
 
 /* ---------- wiring ---------- */
-function drawAll() { equity(); sectors(); yearly(); beta(); heatmap(); drawdown(); sharpe(); histogram(); attribution(); churn(); live(); }
+// charts are drawn only when their tab is first shown (and again after a theme change), so the page stays light
+const TABS = { overview: [equity, sectors, yearly, beta], heatmap: [heatmap], risk: [drawdown, sharpe, histogram, attribution],
+  churn: [churn], live: [live] };
+const drawn = new Set();
+const activeTab = () => document.querySelector('.tab.active').dataset.p;
+function drawTab(n) { if (drawn.has(n)) return; drawn.add(n); (TABS[n] || []).forEach(f => f()); }
+function drawAll() { drawn.clear(); drawTab(activeTab()); }
 function setTheme(t) {
   document.documentElement.dataset.theme = t; $('theme').textContent = t === 'light' ? '☀️' : '🌙';
   try { localStorage.setItem('t15-theme', t); } catch (e) { /* storage blocked */ }
@@ -327,7 +333,7 @@ function openTab(name) {
   const b = document.querySelector(`.tab[data-p="${name}"]`); if (!b) return;
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === b));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'p-' + name));
-  Object.values(charts).forEach(c => c.resize());
+  drawTab(name);
 }
 $('tabs').onclick = e => { const b = e.target.closest('.tab'); if (b) { openTab(b.dataset.p); history.replaceState(null, '', '#' + b.dataset.p); } };
 window.addEventListener('hashchange', () => openTab(location.hash.slice(1)));
