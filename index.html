@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EquiQuant</title>
+  <meta name="description" content="Backtest and live portfolio of two momentum strategies (Top 3 and Top 15) on 12-1 momentum, 52-week high and ROCE.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Roboto+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="style.css?v=6">
+</head>
+<body>
+<div id="modal" class="modal" hidden>
+  <div class="modal-box">
+    <div class="card-h"><h3 id="m-title"></h3><button class="icon-btn" id="m-close" aria-label="Close">✕</button></div>
+    <div id="m-body"></div>
+  </div>
+</div>
+
+<main class="app">
+  <header class="site-header">
+    <div class="brand">
+      <div class="badge">EQ</div>
+      <div>
+        <h1>EquiQuant <small id="h-strat"></small></h1>
+        <p class="sub mono" id="h-period"></p>
+        <p class="sub mono" id="h-built"></p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="seg" id="strat"><a href="?s=top3" data-s="top3">Top 3</a><a href="?s=top15" data-s="top15">Top 15</a></div>
+      <span class="pill" id="h-mtd"></span>
+      <button class="icon-btn" id="theme" aria-label="Switch theme">🌙</button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-p="overview">Overview</button>
+    <button class="tab" data-p="heatmap">PnL Heatmap</button>
+    <button class="tab" data-p="risk">Risk &amp; Reward</button>
+    <button class="tab" data-p="metrics">Performance Metrics</button>
+    <button class="tab" data-p="churn">Churning Analysis</button>
+    <button class="tab" data-p="live">Live Portfolio</button>
+    <button class="tab" data-p="changes">Portfolio Changes</button>
+    <button class="tab" data-p="method">Methodology</button>
+  </nav>
+
+  <section class="kpis" id="kpis"></section>
+
+  <!-- OVERVIEW -->
+  <section class="panel active" id="p-overview">
+    <div class="grid">
+      <div class="card s8"><div class="card-h"><h3>Equity Curve</h3>
+        <div class="seg" id="eq-scale"><button class="on" data-v="logarithmic">Log</button><button data-v="linear">Linear</button></div></div>
+        <div class="chart tall"><canvas id="c-equity"></canvas></div></div>
+      <div class="card s4"><div class="card-h"><h3>Sector Allocation</h3><span>Current portfolio</span></div>
+        <div class="chart tall"><canvas id="c-sector"></canvas></div></div>
+      <div class="card s8"><div class="card-h"><h3>Calendar Year Returns</h3><span>Strategy vs benchmarks</span></div>
+        <div class="chart"><canvas id="c-yearly"></canvas></div></div>
+      <div class="card s4"><div class="card-h"><h3>Rolling 12M Beta</h3><span>vs Nifty 500 TRI</span></div>
+        <div class="chart"><canvas id="c-beta"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- HEATMAP -->
+  <section class="panel" id="p-heatmap">
+    <div class="card"><div class="card-h"><h3>Monthly PnL Heatmap</h3>
+      <div class="seg" id="hm-mode"><button class="on" data-v="abs">Strategy return</button><button data-v="ex">Excess vs Nifty 500</button></div></div>
+      <div class="tbl-wrap"><table class="hm" id="hm"></table></div>
+      <p class="note">Net of 0.3% cost. Click any month to see the <span class="n-stocks"></span> stocks held, what was bought and sold, and the benchmark.</p>
+    </div>
+  </section>
+
+  <!-- RISK -->
+  <section class="panel" id="p-risk">
+    <div class="grid">
+      <div class="card s12"><div class="card-h"><h3>Underwater Curve (Drawdown)</h3><span>Fall from previous peak</span></div>
+        <div class="chart"><canvas id="c-dd"></canvas></div></div>
+      <div class="card s6"><div class="card-h"><h3>Ex-Ante vs Realised Sharpe</h3><span>Expected at pick date vs actual (rolling 12M)</span></div>
+        <div class="chart"><canvas id="c-sharpe"></canvas></div>
+        <p class="note">Ex-ante uses the past 252 days of the stocks picked. Momentum picks look far better on paper than they turn out: compare the two lines.</p></div>
+      <div class="card s6"><div class="card-h"><h3>Distribution of Monthly Returns</h3><span>Number of months</span></div>
+        <div class="chart"><canvas id="c-hist"></canvas></div></div>
+      <div class="card s6"><div class="card-h"><h3>PnL Attribution</h3><span>Top 10 stocks by total contribution</span></div>
+        <div class="chart"><canvas id="c-attr"></canvas></div></div>
+      <div class="card s6"><div class="card-h"><h3>Worst Drawdowns</h3><span>Falls of 10% or more</span></div>
+        <div class="tbl-wrap"><table id="t-dd"></table></div></div>
+    </div>
+  </section>
+
+  <!-- METRICS -->
+  <section class="panel" id="p-metrics">
+    <div class="grid">
+      <div class="card s12"><div class="card-h"><h3>Executive Summary</h3><span id="m-span"></span></div>
+        <div class="tbl-wrap"><table id="t-metrics"></table></div></div>
+      <div class="card s12"><div class="card-h"><h3>Year by Year</h3><span>Calendar-year return; partial first and last year</span></div>
+        <div class="tbl-wrap"><table id="t-yearly"></table></div></div>
+      <div class="card s12" id="variants-card"><div class="card-h"><h3>Rule Comparison</h3><span>Whole market, 0.3% cost — highlighted row is this dashboard</span></div>
+        <div class="tbl-wrap"><table id="t-variants"></table></div>
+        <p class="note">Variants use the 29 Oct 2026 close for October (stock data end); the dashboard uses the true 30 Oct month-end, so its CAGR differs slightly.</p></div>
+    </div>
+  </section>
+
+  <!-- CHURN -->
+  <section class="panel" id="p-churn">
+    <div class="grid">
+      <div class="card s8"><div class="card-h"><h3>Stocks Added per Month</h3><span>Bought, and kept only because of the top-20 buffer</span></div>
+        <div class="chart"><canvas id="c-churn"></canvas></div></div>
+      <div class="card s4"><div class="card-h"><h3>Turnover &amp; Cost</h3><span>Per month</span></div>
+        <div class="chart"><canvas id="c-turn"></canvas></div></div>
+      <div class="card s12"><div class="card-h"><h3>Monthly Churning Detail</h3><span>Rank shown is the stock's rank at the pick date</span></div>
+        <div class="tbl-wrap scroll"><table id="t-churn"></table></div></div>
+    </div>
+  </section>
+
+  <!-- LIVE -->
+  <section class="panel" id="p-live">
+    <div class="grid">
+      <div class="card s8"><div class="card-h"><h3>Current Holdings</h3>
+        <label class="inv">Invest ₹ <input id="inv" type="number" min="0" step="10000" value="1000000"></label></div>
+        <div class="tbl-wrap"><table id="t-live"></table></div>
+        <div class="totals" id="live-tot"></div>
+        <p class="note" id="live-note"></p></div>
+      <div class="card s4"><div class="card-h"><h3>Month to Date</h3><span id="live-asof"></span></div>
+        <div class="chart"><canvas id="c-mtd"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- CHANGES -->
+  <section class="panel" id="p-changes">
+    <div class="card"><div class="card-h"><h3>Portfolio Changes</h3><span id="chg-sub"></span></div>
+      <div class="tbl-wrap"><table id="t-changes"></table></div>
+      <p class="note" id="chg-note"></p>
+    </div>
+  </section>
+
+  <!-- METHOD -->
+  <section class="panel" id="p-method">
+    <div class="grid">
+      <div class="card s6 prose" id="method"></div>
+      <div class="card s6 prose" id="caveats"></div>
+    </div>
+  </section>
+
+  <footer>Backtest results, not investment advice. Past performance does not guarantee future returns.</footer>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  window.STRAT = new URLSearchParams(location.search).get('s') === 'top15' ? 'top15' : 'top3';
+  document.write(`<script src="${STRAT === 'top3' ? 'data_top3.js' : 'data.js'}?v=6"><\/script><script src="app.js?v=6"><\/script>`);
+</script>
+</body>
+</html>
