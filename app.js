@@ -1,9 +1,6 @@
 /* EquiQuant — reads window.DATA (data.js = Top 15, data_top3.js = Top 3; written by build.py) */
-const D = window.DATA;
+let D, BN, N500, cur, hist, last, M;     // the strategy on screen; set by use()
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const BN = Object.keys(D.bench);                       // Nifty 50, Nifty 500, BSE 500
-const N500 = D.bench['Nifty 500'];
-const cur = D.current, hist = D.history, last = hist[hist.length - 1];
 const charts = {};
 
 const pct = (x, d = 1) => x == null || isNaN(x) ? '—' : (x * 100).toFixed(d) + '%';
@@ -23,7 +20,10 @@ const bcol = (c, n) => ({ 'Nifty 50': c.n50, 'Nifty 500': c.n500, 'BSE 500': c.b
 /* ---------- derived series ---------- */
 const cum = r => r.reduce((a, x) => (a.push(a[a.length - 1] * (1 + x)), a), [1]);
 const ddOf = r => { let pk = 1, w = 1; return r.map(x => (w *= 1 + x, pk = Math.max(pk, w), w / pk - 1)); };
-const M = D.metrics.Strategy;
+function use(key) {  // switch strategy in place: both data sets are already loaded, nothing is fetched
+  D = window.DS[key]; BN = Object.keys(D.bench); N500 = D.bench['Nifty 500'];
+  cur = D.current; hist = D.history; last = hist[hist.length - 1]; M = D.metrics.Strategy;
+}
 
 /* ---------- header + KPIs ---------- */
 function header() {
@@ -347,6 +347,12 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') $('modal').h
 $('theme').onclick = () => setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
 $('inv').oninput = () => { live(); changes(); };
 
+function render() { header(); metricsTables(); changes(); method(); drawAll(); }
+$('strat').onclick = e => { const a = e.target.closest('a'); if (!a) return; e.preventDefault();
+  if (a.dataset.s === D.key) return;
+  use(a.dataset.s); $('modal').hidden = true; render();
+  history.replaceState(null, '', '?s=' + a.dataset.s + location.hash); };
+use(new URLSearchParams(location.search).get('s') === 'top15' ? 'top15' : 'top3');
 header(); metricsTables(); changes(); method();
 let saved = 'dark';
 try { saved = localStorage.getItem('t15-theme') || 'dark'; } catch (e) { /* storage blocked */ }
