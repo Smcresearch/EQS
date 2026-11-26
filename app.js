@@ -39,8 +39,11 @@ function header() {
   $('h-built').textContent = `Prices to ${cur.asof} · built ${D.built}`;
   const ex = cur.mtd - cur.bench_mtd['Nifty 500'];
   const p = $('h-mtd');
-  p.textContent = `${mlabel(last.month)} MTD ${sp(cur.mtd, 2)} · N500 ${sp(cur.bench_mtd['Nifty 500'], 2)}`;
-  p.className = 'pill' + (ex < 0 ? ' neg' : '');
+  const v = x => `<b class="${cls(x)}">${sp(x, 2)}</b>`;  // each number coloured by its own sign
+  p.innerHTML = `<span class="pl">${mlabel(last.month)} MTD</span> Strategy ${v(cur.mtd)}
+    <span class="sep">·</span> Nifty 500 ${v(cur.bench_mtd['Nifty 500'])}
+    <span class="sep">·</span> Excess ${v(ex)}`;
+  p.className = 'pill';
   const b = D.metrics['Nifty 500'];
   const grow = cum(D.strategy).at(-1) * (1 + cur.mtd_net), growB = cum(N500).at(-1) * (1 + cur.bench_mtd['Nifty 500']);
   const k = [

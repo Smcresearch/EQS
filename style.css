@@ -44,6 +44,10 @@ body {
 .pill { font-family: var(--mono); font-size: .7rem; font-weight: 700; padding: .4rem .75rem; border-radius: 999px;
   border: 1px solid var(--border); background: rgba(16, 185, 129, .1); color: var(--emerald); }
 .pill.neg { background: rgba(244, 63, 94, .1); color: var(--rose); }
+#h-mtd { background: var(--bar); color: var(--slate); font-weight: 600; font-size: .74rem; padding: .5rem .9rem; }
+#h-mtd b { font-weight: 800; font-size: .82rem; }
+#h-mtd .pl { color: var(--white); font-weight: 800; text-transform: uppercase; letter-spacing: .06em; margin-right: .3rem; }
+#h-mtd .sep { opacity: .4; margin: 0 .2rem; }
 .icon-btn { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border); background: rgba(127, 127, 127, .08);
   color: var(--white); cursor: pointer; font-size: 1.05rem; }
 .icon-btn:hover { transform: scale(1.08); }
