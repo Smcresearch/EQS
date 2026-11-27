@@ -90,9 +90,9 @@ body {
 .seg button { border: 0; background: transparent; color: var(--slate); font: 600 .7rem var(--font); padding: .35rem .7rem; cursor: pointer; }
 .seg button.on, .seg a.on { background: var(--cyan); color: #020817; }
 .seg a { color: var(--slate); font: 700 .75rem var(--font); padding: .45rem .9rem; text-decoration: none; }
-#strat { gap: .3rem; padding: .3rem; background: var(--bar); border-radius: .75rem; }
-#strat a { padding: .55rem 1.2rem; border-radius: .6rem; font-size: .82rem; letter-spacing: .03em; }
-#strat a.on { background: linear-gradient(135deg, var(--cyan), #0ea5e9); color: #001c27; box-shadow: 0 4px 16px rgba(34, 211, 238, .3); }
+.sw { gap: .3rem; padding: .3rem; background: var(--bar); border-radius: .75rem; }
+.sw a { padding: .55rem 1.2rem; border-radius: .6rem; font-size: .82rem; letter-spacing: .03em; }
+.sw a.on { background: linear-gradient(135deg, var(--cyan), #0ea5e9); color: #001c27; box-shadow: 0 4px 16px rgba(34, 211, 238, .3); }
 
 /* tables */
 .tbl-wrap { overflow-x: auto; }

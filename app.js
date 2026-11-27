@@ -20,6 +20,17 @@ const bcol = (c, n) => ({ 'Nifty 50': c.n50, 'Nifty 500': c.n500, 'BSE 500': c.b
 /* ---------- derived series ---------- */
 const cum = r => r.reduce((a, x) => (a.push(a[a.length - 1] * (1 + x)), a), [1]);
 const ddOf = r => { let pk = 1, w = 1; return r.map(x => (w *= 1 + x, pk = Math.max(pk, w), w / pk - 1)); };
+const DATA_V = 10;  // bump when data files are rebuilt
+const loading = {};
+function load(key) {  // data_<key>.js registers itself in window.DS; each file is fetched once
+  return loading[key] ||= new Promise((ok, fail) => {
+    if (window.DS && window.DS[key]) return ok();
+    const s = document.createElement('script'); s.src = `data_${key}.js?v=${DATA_V}`;
+    s.onload = ok; s.onerror = () => { delete loading[key]; fail(new Error('could not load ' + key)); };
+    document.head.appendChild(s);
+  });
+}
+const keyOf = (s, u) => s + (u ? '_' + u : '');
 function use(key) {  // switch strategy in place: both data sets are already loaded, nothing is fetched
   D = window.DS[key]; BN = Object.keys(D.bench); N500 = D.bench['Nifty 500'];
   cur = D.current; hist = D.history; last = hist[hist.length - 1]; M = D.metrics.Strategy;
@@ -27,14 +38,15 @@ function use(key) {  // switch strategy in place: both data sets are already loa
 
 /* ---------- header + KPIs ---------- */
 function header() {
-  const r = D.rules, t3 = D.key === 'top3';
+  const r = D.rules, t3 = D.key.startsWith('top3');
   document.title = `EquiQuant · Top ${r.n}`;
-  $('h-strat').textContent = `Top ${r.n} · Momentum · 52W High · ${t3 ? 'ROCE / ROE' : 'ROCE'} · Buffer ${r.buffer} · Equal weight`;
-  document.querySelectorAll('#strat a').forEach(a => a.classList.toggle('on', a.dataset.s === (D.key || 'top15')));
+  $('h-strat').textContent = `Top ${r.n} · Momentum · 52W High · ${t3 ? 'ROCE / ROE' : 'ROCE'} · Buffer ${r.buffer} · Equal weight · Mcap ≥ ₹${(D.mcap || 1000).toLocaleString('en-IN')} cr`;
+  document.querySelectorAll('#strat a').forEach(a => a.classList.toggle('on', a.dataset.s === D.key.split('_')[0]));
+  document.querySelectorAll('#univ a').forEach(a => a.classList.toggle('on', a.dataset.u === String(D.mcap || '')));
   document.querySelectorAll('.n-stocks').forEach(e => e.textContent = r.n);
   $('chg-note').textContent = `New: entered the top ${r.n} and bought. Kept: still in the top ${r.n}. Kept (buffer): ranked ${r.n + 1}–${r.buffer}, so held instead of sold. Sold: dropped below rank ${r.buffer}.`
     + (t3 ? ` A new buy that rose more than ${pct(D.spike, 0)} in the last 5 trading days is skipped; the next stock is taken.` : '');
-  $('variants-card').hidden = t3;  // the comparison table is for the Top 15 rule set
+  $('variants-card').hidden = D.key !== 'top15';  // the comparison table is for the Top 15 whole-market rule set
   $('h-period').textContent = `Backtest ${D.period} · ${D.months.length} months · cost ${pct(D.rules.cost)} of turnover`;
   $('h-built').textContent = `Prices to ${cur.asof} · built ${D.built}`;
   const ex = cur.mtd - cur.bench_mtd['Nifty 500'];
@@ -289,17 +301,17 @@ function changes() {
 function method() {
   const r = D.rules;
   $('method').innerHTML = `<div class="card-h"><h3>How the Strategy Works</h3></div>
-    <h4>1 · Universe (each month-end)</h4><p>All NSE stocks with median daily traded value of at least ₹1 crore and market cap of at least ₹1,000 crore. Stocks with unreliable price data are excluded.</p>
+    <h4>1 · Universe (each month-end)</h4><p>All NSE stocks with median daily traded value of at least ₹1 crore and market cap of at least <b>₹${(D.mcap || 1000).toLocaleString('en-IN')} crore</b> (market cap at that month-end, so no look-ahead). Stocks with unreliable price data are excluded.</p>
     <h4>2 · Score</h4><ol><li><b>12-1 momentum</b>: return over the last 12 months, leaving out the latest month.</li>
       <li><b>Nearness to the 52-week high</b>: price ÷ highest price of the last year.</li>
-      <li><b>ROCE</b>: from the latest annual results already published on that date ${D.key === 'top3'
+      <li><b>ROCE</b>: from the latest annual results already published on that date ${D.key.startsWith('top3')
         ? '(screener.in ROCE; <b>ROE for banks and NBFCs</b>; stocks with neither are removed from the list).'
         : '(missing ROCE counts as average).'}</li></ol>
       <p>Each factor is turned into a percentile rank (0–1) within that month's universe and the three are added. The highest total ranks first.</p>
     <h4>3 · Buy and sell rules</h4><ul><li>Hold <b>${r.n} stocks</b>, equal weight (${pct(1 / r.n, 2)} each).</li>
       <li>A held stock is <b>sold only when it drops below rank ${r.buffer}</b>. Ranks ${r.n + 1}–${r.buffer} are kept (the buffer).</li>
       <li>Empty places are filled with the <b>best-ranked new stocks from the top ${r.n}</b>.</li>
-      ${D.key === 'top3' ? `<li><b>Spike filter:</b> a new buy that rose more than ${pct(D.spike, 0)} in the last 5 trading days is skipped and the next stock is taken (held stocks are not affected).</li>
+      ${D.key.startsWith('top3') ? `<li><b>Spike filter:</b> a new buy that rose more than ${pct(D.spike, 0)} in the last 5 trading days is skipped and the next stock is taken (held stocks are not affected).</li>
       <li>A stock in both months is <b>carried forward</b>, not sold and bought again; only the trim or top-up back to equal weight is traded.</li>` : ''}
       <li>Reviewed every month-end; trades at that close.</li></ul>
     <h4>4 · Cost</h4><p><b>${pct(r.cost)}</b> on every rupee bought or sold (turnover = sum of weight changes, counting buys and sells). It covers brokerage, taxes and impact. The first month counts as buying everything once.</p>
@@ -351,13 +363,24 @@ $('theme').onclick = () => setTheme(document.documentElement.dataset.theme === '
 $('inv').oninput = () => { live(); changes(); };
 
 function render() { header(); metricsTables(); changes(); method(); drawAll(); }
-$('strat').onclick = e => { const a = e.target.closest('a'); if (!a) return; e.preventDefault();
-  if (a.dataset.s === D.key) return;
-  use(a.dataset.s); $('modal').hidden = true; render();
-  history.replaceState(null, '', '?s=' + a.dataset.s + location.hash); };
-use(new URLSearchParams(location.search).get('s') === 'top15' ? 'top15' : 'top3');
-header(); metricsTables(); changes(); method();
-let saved = 'dark';
-try { saved = localStorage.getItem('t15-theme') || 'dark'; } catch (e) { /* storage blocked */ }
-setTheme(saved);
-if (location.hash) openTab(location.hash.slice(1));
+const q = new URLSearchParams(location.search);
+let strat = q.get('s') === 'top15' ? 'top15' : 'top3', univ = ['7500', '10000'].includes(q.get('u')) ? q.get('u') : '';
+async function go(s, u) {
+  const k = keyOf(s, u); if (D && k === D.key) return;
+  document.body.style.cursor = 'progress';
+  try { await load(k); } finally { document.body.style.cursor = ''; }
+  strat = s; univ = u; use(k); $('modal').hidden = true; render();
+  history.replaceState(null, '', `?s=${s}${u ? '&u=' + u : ''}${location.hash}`);
+}
+$('strat').onclick = e => { const a = e.target.closest('a'); if (!a) return; e.preventDefault(); go(a.dataset.s, univ); };
+$('univ').onclick = e => { const a = e.target.closest('a'); if (!a) return; e.preventDefault(); go(strat, a.dataset.u); };
+(async () => {
+  await load(keyOf(strat, univ)); use(keyOf(strat, univ));
+  header(); metricsTables(); changes(); method();
+  let saved = 'dark';
+  try { saved = localStorage.getItem('t15-theme') || 'dark'; } catch (e) { /* storage blocked */ }
+  setTheme(saved);
+  if (location.hash) openTab(location.hash.slice(1));
+  // fetch the other five versions in the background so later switches are instant
+  for (const s of ['top3', 'top15']) for (const u of ['', '7500', '10000']) load(keyOf(s, u)).catch(() => {});
+})();
