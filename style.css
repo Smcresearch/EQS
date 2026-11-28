@@ -157,3 +157,4 @@ footer { text-align: center; color: var(--muted); font-size: .68rem; margin-top:
   .header-right { width: 100%; justify-content: space-between; }
   .card { padding: .8rem; }
 }
+#strat a.shield.on { background: linear-gradient(135deg, #fbbf24, #f97316); color: #1c1003; box-shadow: 0 4px 16px rgba(249, 115, 22, .35); }

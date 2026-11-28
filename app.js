@@ -1,4 +1,4 @@
-/* EquiQuant — reads window.DATA (data.js = Top 15, data_top3.js = Top 3; written by build.py) */
+/* EquiQuant — reads window.DS (data.js = Top 15, data_top3.js = Top 3, data_shield.js = Top 3 Shield; written by build.py) */
 let D, BN, N500, cur, hist, last, M;     // the strategy on screen; set by use()
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const charts = {};
@@ -27,13 +27,14 @@ function use(key) {  // switch strategy in place: both data sets are already loa
 
 /* ---------- header + KPIs ---------- */
 function header() {
-  const r = D.rules, t3 = D.key === 'top3';
-  document.title = `EquiQuant · Top ${r.n}`;
-  $('h-strat').textContent = `Top ${r.n} · Momentum · 52W High · ${t3 ? 'ROCE / ROE' : 'ROCE'} · Buffer ${r.buffer} · Equal weight`;
+  const r = D.rules, t3 = D.key !== 'top15', sh = D.shield;
+  document.title = `EquiQuant · Top ${r.n}${sh ? ' Shield' : ''}`;
+  $('h-strat').textContent = `${sh ? '🛡 ' : ''}Top ${r.n}${sh ? ' Shield' : ''} · Momentum · 52W High · ${t3 ? 'ROCE / ROE' : 'ROCE'} · Buffer ${r.buffer} · Equal weight${sh ? ` · ${sh.strikes}-month loser cooldown ${sh.cool}M` : ''}`;
   document.querySelectorAll('#strat a').forEach(a => a.classList.toggle('on', a.dataset.s === (D.key || 'top15')));
   document.querySelectorAll('.n-stocks').forEach(e => e.textContent = r.n);
   $('chg-note').textContent = `New: entered the top ${r.n} and bought. Kept: still in the top ${r.n}. Kept (buffer): ranked ${r.n + 1}–${r.buffer}, so held instead of sold. Sold: dropped below rank ${r.buffer}.`
-    + (t3 ? ` A new buy that rose more than ${pct(D.spike, 0)} in the last 5 trading days is skipped; the next stock is taken.` : '');
+    + (t3 ? ` A new buy that rose more than ${pct(D.spike, 0)} in the last 5 trading days is skipped; the next stock is taken.` : '')
+    + (sh ? ` Shield: a stock that fell in each of the last ${sh.strikes} months is blocked (not held, not bought) for the next ${sh.cool} month-ends.` : '');
   $('variants-card').hidden = t3;  // the comparison table is for the Top 15 rule set
   $('h-period').textContent = `Backtest ${D.period} · ${D.months.length} months · cost ${pct(D.rules.cost)} of turnover`;
   $('h-built').textContent = `Prices to ${cur.asof} · built ${D.built}`;
@@ -292,14 +293,15 @@ function method() {
     <h4>1 · Universe (each month-end)</h4><p>All NSE stocks with median daily traded value of at least ₹1 crore and market cap of at least ₹1,000 crore. Stocks with unreliable price data are excluded.</p>
     <h4>2 · Score</h4><ol><li><b>12-1 momentum</b>: return over the last 12 months, leaving out the latest month.</li>
       <li><b>Nearness to the 52-week high</b>: price ÷ highest price of the last year.</li>
-      <li><b>ROCE</b>: from the latest annual results already published on that date ${D.key === 'top3'
+      <li><b>ROCE</b>: from the latest annual results already published on that date ${D.key !== 'top15'
         ? '(screener.in ROCE; <b>ROE for banks and NBFCs</b>; stocks with neither are removed from the list).'
         : '(missing ROCE counts as average).'}</li></ol>
       <p>Each factor is turned into a percentile rank (0–1) within that month's universe and the three are added. The highest total ranks first.</p>
     <h4>3 · Buy and sell rules</h4><ul><li>Hold <b>${r.n} stocks</b>, equal weight (${pct(1 / r.n, 2)} each).</li>
       <li>A held stock is <b>sold only when it drops below rank ${r.buffer}</b>. Ranks ${r.n + 1}–${r.buffer} are kept (the buffer).</li>
       <li>Empty places are filled with the <b>best-ranked new stocks from the top ${r.n}</b>.</li>
-      ${D.key === 'top3' ? `<li><b>Spike filter:</b> a new buy that rose more than ${pct(D.spike, 0)} in the last 5 trading days is skipped and the next stock is taken (held stocks are not affected).</li>
+      ${D.key !== 'top15' ? `<li><b>Spike filter:</b> a new buy that rose more than ${pct(D.spike, 0)} in the last 5 trading days is skipped and the next stock is taken (held stocks are not affected).</li>
+      ${D.shield ? `<li><b>Shield (cooldown):</b> at each month-end, any stock whose last ${D.shield.strikes} monthly returns were both negative is put on a <b>${D.shield.cool}-month block</b>. A blocked stock is sold if held and cannot be bought; the next-ranked stock fills its place. A new ${D.shield.strikes}-month fall restarts the block.</li>` : ''}
       <li>A stock in both months is <b>carried forward</b>, not sold and bought again; only the trim or top-up back to equal weight is traded.</li>` : ''}
       <li>Reviewed every month-end; trades at that close.</li></ul>
     <h4>4 · Cost</h4><p><b>${pct(r.cost)}</b> on every rupee bought or sold (turnover = sum of weight changes, counting buys and sells). It covers brokerage, taxes and impact. The first month counts as buying everything once.</p>
@@ -309,8 +311,9 @@ function method() {
       <li><b>Survivorship bias.</b> The price data covers companies listed today; delisted failures are missing. This probably adds about 2–2.5% a year to the results.</li>
       <li><b>Settings chosen with hindsight.</b> Top ${D.rules.n}, the top-20 buffer and the factors were picked after testing on this same history. Expect live results to be lower.</li>
       <li><b>Ex-ante Sharpe is optimistic.</b> At the pick date the ${D.rules.n} stocks look much better than they turn out (see Risk &amp; Reward).</li>
-      ${D.key === 'top3' ? `<li><b>Timing luck.</b> The same rule traded a few days after month-end gave 23%–55% CAGR; 4 tranches (days 0, 5, 10, 15) about 43%. Realistic: 40–45% a year.</li>
-      <li><b>Daily falls are deeper.</b> Month-end max fall is −28.7%, but on daily prices it was −37.5% (Dec 2024 → Apr 2025). Only 3 stocks: one bad stock moves the whole book.</li>` : ''}
+      ${D.key !== 'top15' ? `<li><b>Timing luck.</b> The same rule traded a few days after month-end gave 23%–55% CAGR; 4 tranches (days 0, 5, 10, 15) about 43%. Realistic: 40–45% a year.</li>
+      ${D.shield ? '' : `<li><b>Daily falls are deeper.</b> Month-end max fall is −28.7%, but on daily prices it was −37.5% (Dec 2024 → Apr 2025). Only 3 stocks: one bad stock moves the whole book.</li>`}` : ''}
+      ${D.shield ? `<li><b>Shield is experimental.</b> Its edge over plain Top 3 (58.6% vs 56.4% CAGR, −20.8% vs −28.7% max fall) comes mostly from 2022–2023; it did worse than Top 3 in 5 of 11 years, and a 4-month block instead of 3 gave a −40% fall. Track it on paper before using real money.</li>` : ''}
       <li><b>Sectors</b> are today's classification for each stock.</li>
       <li><b>Data:</b> stock prices from the stored daily files and Yahoo Finance; indices from niftyindices.com. October 2026 uses the 30 Oct close.</li></ul>
     <h4>Rules tested and rejected</h4><ul><li>RSI(14) &gt; 55 instead of the 52-week high: lower return, deeper falls.</li>
@@ -355,7 +358,8 @@ $('strat').onclick = e => { const a = e.target.closest('a'); if (!a) return; e.p
   if (a.dataset.s === D.key) return;
   use(a.dataset.s); $('modal').hidden = true; render();
   history.replaceState(null, '', '?s=' + a.dataset.s + location.hash); };
-use(new URLSearchParams(location.search).get('s') === 'top15' ? 'top15' : 'top3');
+const s0 = new URLSearchParams(location.search).get('s');
+use(['top15', 'shield'].includes(s0) ? s0 : 'top3');
 header(); metricsTables(); changes(); method();
 let saved = 'dark';
 try { saved = localStorage.getItem('t15-theme') || 'dark'; } catch (e) { /* storage blocked */ }
